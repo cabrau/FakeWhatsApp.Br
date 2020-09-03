@@ -9,4 +9,7 @@ This notebook parses the data collected in WhatsApp groups, converting from free
 In this notebook we transfer the labels annotated manually in the viral messages to the entire corpus and remove personal data such as phone numbers present in the text.
 
 * exploratory analysis.ipynb<br/>
-Exploration and visualization of the data set
+Exploration and visualization of the data set.
+
+* compare corpora.ipynb<br/>
+comparison with fake news corpus on Twitter to demonstrate the need for a corpus of WhatsApp texts.
