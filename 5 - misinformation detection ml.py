@@ -17,9 +17,9 @@
 # # NOTES TO MYSELF
 # 
 # **To do:**
-# * max_features = 500
 # * linguistic features
 # * hyperparamater tunning; validation
+# 
 # 
 # **References:**
 # * https://towardsdatascience.com/text-classification-in-python-dd95d264c802
@@ -79,6 +79,24 @@ start_time = time.time()
 
 
 # ## Experiments
+# 
+# ## Subsets:
+# * Viral
+# * All
+# 
+# ### Feature engineering
+# * bow: bag of words
+# * tfidf: term frequency–inverse document frequency
+# * max_features: limits to 500
+# 
+# ### Pre-processing
+# * processed: convert url in just the domain, separate emojis, remove punctuation, downcase, lemmatization, remove stop words
+# 
+# ### Data balancing
+# * smote: Synthetic Minority Oversampling Technique
+# * undersampling: random undersampling
+# * random_oversampling
+# 
 # 1. **ml-bow**<br> 
 # One of the best so far. Best F1: 0.6429 random forest<br>
 # 
@@ -109,15 +127,19 @@ start_time = time.time()
 # *Edit:* well, when things look too good to be true, they probably are. The good results were just a case of data leaking.
 # 
 # * **ml-tfidf-random_oversampling**<br>
+# Similar to *ml-bow-random_oversampling*
 # 
 # * **ml-bow-processed-random_oversampling**<br>
 # Similar to *ml-bow-random_oversampling*
 # 
 # * **ml-tfidf-processed-random_oversampling**<br>
+# Similar to *ml-bow-random_oversampling*
 # 
 # * **ml-bow-processed-random_oversampling-max_features**<br>
+# Poor.
 # 
 # * **ml-tfidf-processed-random_oversampling-max_features**<br>
+# Poor.
 # 
 # 
 # ### Conclusions:
@@ -125,24 +147,33 @@ start_time = time.time()
 # * Pre-processing the data didn't appear to have a great impact, despite the great reduction of dimentionality
 # * BOW features are comparably to TF-IDF features
 # * Random oversampling is a good oversampling technique
+# * Use a maximum number of features wasn't a good approach
 
 # In[2]:
 
 
-# results analysis
-path = 'results/2018/ml/'
+base = '2018'
+subset = 'viral'
+path_dir = 'results/' + str(base) + '/' + subset + '/ml/'
+path_dir
+
+
+# In[3]:
+
+
+# best results analysis
 df_best = pd.DataFrame(columns=['model', 'accuracy', 'precision', 'recall', 'f1 score', 'auc score','vocab'])
 #iterates over files
-experiment = []
-for filename in os.listdir(path):
-    experiment.append(str(filename).replace('.csv',''))
-    file_path = path + filename
+exp = []
+for filename in os.listdir(path_dir):
+    exp.append(str(filename).replace('.csv',''))
+    file_path = path_dir + filename
     #print(filename)
     df_temp = pd.read_csv(file_path)
-    best_ix = df_temp['f1 score'].argmax()
+    best_ix = df_temp['f1 score'].argmax() #f1 score
     best = df_temp.iloc[best_ix]
     df_best = df_best.append(best)
-df_best['experiment'] = experiment
+df_best['experiment'] = exp
 cols = df_best.columns.tolist()
 cols = cols[-2:] + cols[:-2]
 df_best = df_best[cols]
@@ -153,41 +184,53 @@ df_best.style.background_gradient(cmap='Blues')
 
 
 # # Begin experiment
+experiments =  ['ml-bow-random_oversampling',
+ 'ml-bow-processed-random_oversampling',
+ 'ml-tfidf-random_oversampling',
+ 'ml-tfidf-processed-random_oversampling',
+ 'ml-tfidf-processed-smote',
+ 'ml-bow',
+ 'ml-tfidf-smote',
+ 'ml-tfidf',
+ 'ml-bow-processed',
+ 'ml-tfidf-processed',
+ 'ml-tfidf-random_oversampling-max_features',
+ 'ml-bow-random_oversampling-max_features',
+ 'ml-tfidf-processed-random_oversampling-max_features',
+ 'ml-bow-processed-random_oversampling-max_features',
+ 'ml-bow-processed-smote',
+ 'ml-tfidf-undersampling']
 
-# In[3]:
 
-experiments = ['ml-tfidf-processed-random_oversampling', 
-               'ml-tfidf-processed-random_oversampling-max_features',
-               'ml-bow-processed-random_oversampling-max_features',
-               'ml-bow-random_oversampling-max_features',
-               'ml-tfidf-random_oversampling-max_features']
-
+# In[4]:
 for experiment in experiments:
-    print(experiment)    
-    base = 2018
-    pre_processed = True
-    #experiment = 'ml-tfidf-random_oversampling' #ml-bow-processed-random_oversampling-max_features
+    
+    pre_processed = True # the texts were already pre-processed
     filepath = 'data/' + str(base) + '/fakeWhatsApp.BR_' + str(base) + '.csv'
     df = pd.read_csv(filepath)
+    
+    if subset == 'viral':
+        df = df[df['viral']==1]
+        
     df.head(5)
     
     
     # # Corpus statistics
     
-    # In[4]:
+    # In[5]:
     
     
     df.describe()[['characters','words','sharings']]
     
     
-    # In[5]:
+    # In[6]:
     
     
     texts = df[df['midia']==0]['text']
     y = df[df['midia']==0]['misinformation']
     
     
-    # In[6]:
+    # In[7]:
     
     
     print('total data')
@@ -204,7 +247,7 @@ for experiment in experiments:
                    va = 'center', xytext = (0, 5), textcoords = 'offset points')
     
     
-    # In[7]:
+    # In[8]:
     
     
     #removing duplicates
@@ -227,7 +270,7 @@ for experiment in experiments:
                    va = 'center', xytext = (0, 5), textcoords = 'offset points')
     
     
-    # In[8]:
+    # In[9]:
     
     
     print(len(texts))
@@ -253,7 +296,7 @@ for experiment in experiments:
     # 
     # * **Stop words**
     
-    # In[9]:
+    # In[10]:
     
     
     #emojis and punctuation
@@ -339,28 +382,34 @@ for experiment in experiments:
                
     
     
-    # In[10]:
+    # In[11]:
     
     
     #if experiment is with pre-processed text
     if 'processed' in experiment:
             #text was already pre-processed
             if pre_processed:
-                pro_texts = pickle.load(open( "data/2018/processed_texts.p", "rb" ))            
+                if subset != 'viral':
+                    pro_texts = pickle.load(open( "data/2018/processed_texts.p", "rb" ))
+                else:
+                    pro_texts = pickle.load(open( "data/2018/processed_texts-viral.p", "rb" ))
             else:
                 pro_texts = [preprocess(t) for t in texts]
-                pickle.dump(pro_texts, open( "data/2018/processed_texts.p", "wb" ))
+                if subset != 'viral':
+                    pickle.dump(pro_texts, open( "data/2018/processed_texts.p", "wb" ))
+                else:
+                    pickle.dump(pro_texts, open( "data/2018/processed_texts-viral.p", "wb" ))
     else:
         pro_texts = [t for t in texts]
     
     
-    # In[11]:
+    # In[12]:
     
     
     list(zip(pro_texts[0:10], texts[0:10]))
     
     
-    # In[12]:
+    # In[13]:
     
     
     print(len(pro_texts))
@@ -369,20 +418,20 @@ for experiment in experiments:
     
     # ## Train-test split
     
-    # In[13]:
+    # In[14]:
     
     
     #random state = 42 for reprudictibility
-    texts_train, texts_test, y_train, y_test = train_test_split(pro_texts, y, test_size=0.3, 
+    texts_train, texts_test, y_train, y_test = train_test_split(pro_texts, y, test_size=0.2, 
                                                                         stratify = y, random_state=42)
     
-    full_texts_train, full_texts_test, y_train, y_test = train_test_split(texts, y, test_size=0.3, 
+    full_texts_train, full_texts_test, y_train, y_test = train_test_split(texts, y, test_size=0.2, 
                                                                         stratify = y, random_state=42)
     
     
     # ## Vectorization
     
-    # In[14]:
+    # In[15]:
     
     
     max_feat = 500
@@ -407,7 +456,7 @@ for experiment in experiments:
     
     # ## SVD visualization
     
-    # In[15]:
+    # In[16]:
     
     
     n_components = 2
@@ -419,14 +468,14 @@ for experiment in experiments:
     
     # Put them into a dataframe
     df_features = pd.DataFrame(data=principal_components,
-                     columns=['PC1', 'PC2'])
+                     columns=['1', '2'])
     
     df_features['label'] = y
     
     # Plot
     plt.figure(figsize=(10,10))
-    sns.scatterplot(x='PC1',
-                    y='PC2',
+    sns.scatterplot(x='1',
+                    y='2',
                     hue="label", 
                     data=df_features,
                     alpha=.8).set_title(title);
@@ -434,7 +483,7 @@ for experiment in experiments:
     
     # ## Data balancing
     
-    # In[16]:
+    # In[17]:
     
     
     if 'smote' in experiment:
@@ -451,7 +500,7 @@ for experiment in experiments:
     X_train.shape
     
     
-    # In[17]:
+    # In[18]:
     
     
     vocab_size = X_train.shape[1]
@@ -460,7 +509,7 @@ for experiment in experiments:
     
     # ## Metrics
     
-    # In[18]:
+    # In[19]:
     
     
     scenario = []
@@ -474,7 +523,7 @@ for experiment in experiments:
     
     # ## Models training and test
     
-    # In[19]:
+    # In[20]:
     
     
     print('Logistic Regression')
@@ -491,7 +540,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[20]:
+    # In[21]:
     
     
     print('Bernoulli Naive-Bayes')
@@ -508,7 +557,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[21]:
+    # In[22]:
     
     
     print('Multinomial Naive-Bayes')
@@ -525,7 +574,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[22]:
+    # In[23]:
     
     
     print('Linear Support Vector Machine')
@@ -542,7 +591,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[23]:
+    # In[24]:
     
     
     print('KNN')
@@ -559,7 +608,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[ ]:
+    # In[25]:
     
     
     print('Random Forest')
@@ -576,7 +625,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[ ]:
+    # In[26]:
     
     
     print('Gradient Boosting')
@@ -593,7 +642,7 @@ for experiment in experiments:
     auc_score.append(roc_auc)
     
     
-    # In[ ]:
+    # In[38]:
     
     
     print('Multilayer perceptron')
@@ -612,7 +661,7 @@ for experiment in experiments:
     
     # ## Results
     
-    # In[ ]:
+    # In[28]:
     
     
     end_time = time.time()
@@ -620,7 +669,7 @@ for experiment in experiments:
     print('ellapsed time (min):', ellapsed_time/60)
     
     
-    # In[ ]:
+    # In[29]:
     
     
     df_metrics = pd.DataFrame({'model':model,
@@ -634,11 +683,14 @@ for experiment in experiments:
     df_metrics
     
     
-    # In[ ]:
+    # In[30]:
     
     
-    file = 'results/2018/ml/' + experiment + '.csv'
-    df_metrics.to_csv(file, index = False)
-    print(file)
+    filepath = 'results/' + base + '/' + subset + '/ml/' + experiment + '.csv'
+    filepath
     
     
+    # In[31]:
+    
+    
+    df_metrics.to_csv(filepath, index = False)
