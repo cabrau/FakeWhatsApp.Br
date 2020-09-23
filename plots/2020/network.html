@@ -1,0 +1,105 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 1000px;
+            height: 800px;
+            background-color: #ffffff;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"id": "jair", "label": "jair", "shape": "dot", "value": 2588}, {"id": "bolsonaro", "label": "bolsonaro", "shape": "dot", "value": 2588}, {"id": "17", "label": "17", "shape": "dot", "value": 2174}, {"id": "presidente", "label": "presidente", "shape": "dot", "value": 1606}, {"id": "primeiro", "label": "primeiro", "shape": "dot", "value": 1485}, {"id": "turno", "label": "turno", "shape": "dot", "value": 1485}, {"id": "segundo", "label": "segundo", "shape": "dot", "value": 1433}, {"id": "bolsonaro17", "label": "bolsonaro17", "shape": "dot", "value": 1318}, {"id": "dep", "label": "dep", "shape": "dot", "value": 1157}, {"id": "federal", "label": "federal", "shape": "dot", "value": 1157}, {"id": "time", "label": "time", "shape": "dot", "value": 1082}, {"id": "senador", "label": "senador", "shape": "dot", "value": 1061}, {"id": "2", "label": "2", "shape": "dot", "value": 1061}, {"id": "1", "label": "1", "shape": "dot", "value": 1059}, {"id": "estadual", "label": "estadual", "shape": "dot", "value": 1047}, {"id": "1\u20e37\u20e3", "label": "1\u20e37\u20e3", "shape": "dot", "value": 939}, {"id": "b17", "label": "b17", "shape": "dot", "value": 908}, {"id": "vai", "label": "vai", "shape": "dot", "value": 832}, {"id": "ser", "label": "ser", "shape": "dot", "value": 832}, {"id": "fake", "label": "fake", "shape": "dot", "value": 824}, {"id": "news", "label": "news", "shape": "dot", "value": 824}, {"id": "haddad13", "label": "haddad13", "shape": "dot", "value": 822}, {"id": "deus", "label": "deus", "shape": "dot", "value": 807}, {"id": "acima", "label": "acima", "shape": "dot", "value": 807}, {"id": "deputado", "label": "deputado", "shape": "dot", "value": 790}, {"id": "todos", "label": "todos", "shape": "dot", "value": 745}, {"id": "ciro", "label": "ciro", "shape": "dot", "value": 737}, {"id": "gomes", "label": "gomes", "shape": "dot", "value": 737}, {"id": "brasil", "label": "brasil", "shape": "dot", "value": 726}, {"id": "redes", "label": "redes", "shape": "dot", "value": 694}, {"id": "sociais", "label": "sociais", "shape": "dot", "value": 694}, {"id": "fernando", "label": "fernando", "shape": "dot", "value": 693}, {"id": "haddad", "label": "haddad", "shape": "dot", "value": 693}, {"id": "boa", "label": "boa", "shape": "dot", "value": 627}, {"id": "noite", "label": "noite", "shape": "dot", "value": 627}, {"id": "2018", "label": "2018", "shape": "dot", "value": 622}, {"id": "milh\u00f5es", "label": "milh\u00f5es", "shape": "dot", "value": 618}, {"id": "votos", "label": "votos", "shape": "dot", "value": 618}, {"id": "votar", "label": "votar", "shape": "dot", "value": 605}, {"id": "ter", "label": "ter", "shape": "dot", "value": 583}, {"id": "177", "label": "177", "shape": "dot", "value": 569}, {"id": "arquivo", "label": "arquivo", "shape": "dot", "value": 561}, {"id": "anexado", "label": "anexado", "shape": "dot", "value": 561}, {"id": "bom", "label": "bom", "shape": "dot", "value": 559}, {"id": "dia", "label": "dia", "shape": "dot", "value": 559}, {"id": "rio", "label": "rio", "shape": "dot", "value": 553}, {"id": "janeiro", "label": "janeiro", "shape": "dot", "value": 553}, {"id": "povo", "label": "povo", "shape": "dot", "value": 542}, {"id": "brasileiro", "label": "brasileiro", "shape": "dot", "value": 542}, {"id": "1o", "label": "1o", "shape": "dot", "value": 522}, {"id": "tudo", "label": "tudo", "shape": "dot", "value": 521}]);
+        edges = new vis.DataSet([{"from": "jair", "to": "bolsonaro", "weight": 258800}, {"from": "bolsonaro", "to": "17", "weight": 217400}, {"from": "17", "to": "17", "weight": 171200}, {"from": "presidente", "to": "bolsonaro", "weight": 160600}, {"from": "primeiro", "to": "turno", "weight": 148500}, {"from": "segundo", "to": "turno", "weight": 143300}, {"from": "bolsonaro17", "to": "bolsonaro17", "weight": 131800}, {"from": "dep", "to": "federal", "weight": 115700}, {"from": "time", "to": "bolsonaro", "weight": 108200}, {"from": "senador", "to": "2", "weight": 106100}, {"from": "senador", "to": "1", "weight": 105900}, {"from": "17", "to": "senador", "weight": 105400}, {"from": "dep", "to": "estadual", "weight": 104700}, {"from": "1\u20e37\u20e3", "to": "1\u20e37\u20e3", "weight": 93900}, {"from": "b17", "to": "b17", "weight": 90800}, {"from": "vai", "to": "ser", "weight": 83200}, {"from": "fake", "to": "news", "weight": 82400}, {"from": "haddad13", "to": "haddad13", "weight": 82200}, {"from": "deus", "to": "acima", "weight": 80700}, {"from": "deputado", "to": "federal", "weight": 79000}, {"from": "acima", "to": "todos", "weight": 74500}, {"from": "ciro", "to": "gomes", "weight": 73700}, {"from": "brasil", "to": "acima", "weight": 72600}, {"from": "redes", "to": "sociais", "weight": 69400}, {"from": "fernando", "to": "haddad", "weight": 69300}, {"from": "boa", "to": "noite", "weight": 62700}, {"from": "bolsonaro", "to": "2018", "weight": 62200}, {"from": "milh\u00f5es", "to": "votos", "weight": 61800}, {"from": "votar", "to": "bolsonaro", "weight": 60500}, {"from": "vai", "to": "ter", "weight": 58300}, {"from": "177", "to": "senador", "weight": 56900}, {"from": "arquivo", "to": "anexado", "weight": 56100}, {"from": "bom", "to": "dia", "weight": 55900}, {"from": "rio", "to": "janeiro", "weight": 55300}, {"from": "povo", "to": "brasileiro", "weight": 54200}, {"from": "1o", "to": "jair", "weight": 52200}, {"from": "acima", "to": "tudo", "weight": 52100}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": false,
+            "type": "continuous"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>
