@@ -12,7 +12,7 @@ import seaborn as sns
 import scipy as sp
 import time
 
-def getTestMetrics(y_test, y_pred, y_prob = []):
+def getTestMetrics(y_test, y_pred, y_prob = [], full_metrics = False, print_charts = True):
     '''
     Plot charts e print performance metrics
     Input: predictions and labels
@@ -25,20 +25,27 @@ def getTestMetrics(y_test, y_pred, y_prob = []):
     precision = metrics.precision_score(y_test, y_pred, pos_label = 1, average = 'binary')
     recall = metrics.recall_score(y_test, y_pred, pos_label = 1, average = 'binary')
     
+    if full_metrics:
+        f1_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
+        precision_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
+        recall_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
+    
     #confusion matrix
-    cf_matrix = metrics.confusion_matrix(y_test, y_pred)
-    group_names = ['VN','FP','FN','VP']
-    group_counts = ['{0:0.0f}'.format(value) for value in
-                    cf_matrix.flatten()]
-    group_percentages = ['{0:.2%}'.format(value) for value in
-                         cf_matrix.flatten()/np.sum(cf_matrix)]
-    labels = [f'{v1}\n{v2}\n{v3}' for v1, v2, v3 in
-              zip(group_names,group_counts,group_percentages)]
-    labels = np.asarray(labels).reshape(2,2)
-    plt.figure(figsize=(15, 5))
-    plt.subplot(121)
-    plt.title('Confusion matrix')
-    sns.heatmap(cf_matrix, annot=labels, fmt='', cmap='Blues')
+    if print_charts:
+        cf_matrix = metrics.confusion_matrix(y_test, y_pred)
+        group_names = ['VN','FP','FN','VP']
+        group_counts = ['{0:0.0f}'.format(value) for value in
+                        cf_matrix.flatten()]
+        group_percentages = ['{0:.2%}'.format(value) for value in
+                             cf_matrix.flatten()/np.sum(cf_matrix)]
+        labels = [f'{v1}\n{v2}\n{v3}' for v1, v2, v3 in
+                  zip(group_names,group_counts,group_percentages)]
+        labels = np.asarray(labels).reshape(2,2)
+        plt.figure(figsize=(15, 5))
+        plt.subplot(121)
+        plt.title('Confusion matrix')
+        sns.heatmap(cf_matrix, annot=labels, fmt='', cmap='Blues')
+    
     roc_auc = 0
 
     if len(y_prob) > 0:
@@ -47,19 +54,25 @@ def getTestMetrics(y_test, y_pred, y_prob = []):
         roc_auc = metrics.auc(fpr, tpr)
         print('AUC: ',roc_auc)
         #plot
-        #plt.figure()
-        lw = 2
-        plt.subplot(122)
-        plt.plot(fpr, tpr, color='darkorange',lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
-        plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('ROC curve')
-        plt.legend(loc="lower right")
-        plt.show()
-    return acc, precision, recall, f1, roc_auc
+        if print_charts:
+            lw = 2
+            plt.subplot(122)
+            plt.plot(fpr, tpr, color='darkorange',lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('ROC curve')
+            plt.legend(loc="lower right")
+            plt.show()
+    
+    if not full_metrics:
+        results = (acc, precision, recall, f1, roc_auc)
+    else:
+        results = (acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc)
+    
+    return results
 
 #MLP shallow para classificação binária
 class Shallow_MLP():

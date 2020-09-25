@@ -17,8 +17,11 @@
 # # NOTES TO MYSELF
 # 
 # **To do:**
-# * linguistic features
-# * hyperparamater tunning; validation
+# * ~~n-grams~~
+# * tunning svm
+# * combine bow and handcrafted features
+# * ~~handcrafted linguistic features~~
+# * ~~hyperparamater tunning; validation~~
 # 
 # 
 # **References:**
@@ -34,6 +37,7 @@ import emoji, re, string, time, os
 from utils import getTestMetrics
 import pandas as pd
 import numpy as np
+from scipy.stats import randint
 import pickle
 
 #nlp
@@ -75,7 +79,7 @@ from imblearn.over_sampling import RandomOverSampler
 get_ipython().run_line_magic('matplotlib', 'inline')
 sns.set(style="darkgrid")
 
-start_time = time.time()
+
 
 
 # ## Experiments
@@ -85,7 +89,7 @@ start_time = time.time()
 # * All
 # 
 # ### Feature engineering
-# * bow: bag of words
+# * bow: binary bag of words
 # * tfidf: term frequency–inverse document frequency
 # * max_features: limits to 500
 # 
@@ -97,50 +101,6 @@ start_time = time.time()
 # * undersampling: random undersampling
 # * random_oversampling
 # 
-# 1. **ml-bow**<br> 
-# One of the best so far. Best F1: 0.6429 random forest<br>
-# 
-# * **ml-tfidf** <br>
-# Comparable with ml-bow. Best F1: 0.6278 random forest<br>
-# 
-# * **ml-tfidf-processed**<br>
-# Comparable with ml-bow and ml-tfidf. The pre-processing didn't had great impact. Precision slightly better.
-# Best F1: 0.6184 random forest<br>
-# 
-# * **ml-bow-processed**<br>
-# Same as ml-tfidf-processed. Best F1: 0.6254 random forest  <br>
-# 
-# * **ml-tfidf-smote**<br>
-# Good result. Smote improves F1 when using tf-idf. Best F1: 0.6426 random forest<br>
-# 
-# * **ml-tfidf-undersampling** <br>
-# Very poor approach. Undersampling is a bad ideia. Increases recall but greatly reduces accuracy. Best F1: 0.3570 bernoulli naive-bayes<br>
-# 
-# * **ml-tfidf-processed-smote**<br>
-# Good result. Best F1: 0.6470 random forest <br>
-# 
-# * **ml-bow-processed-smote**<br>
-# Poor. Smote does not goes well with bow. Best F1: 0.4037 bernoulli naive-bayes<br>
-# 
-# * **ml-bow-random_oversampling**<br>
-# ~~Holy shit!!! This approuch overcame all the expectations! Best F1: 0.9658 random forest~~<br>
-# *Edit:* well, when things look too good to be true, they probably are. The good results were just a case of data leaking.
-# 
-# * **ml-tfidf-random_oversampling**<br>
-# Similar to *ml-bow-random_oversampling*
-# 
-# * **ml-bow-processed-random_oversampling**<br>
-# Similar to *ml-bow-random_oversampling*
-# 
-# * **ml-tfidf-processed-random_oversampling**<br>
-# Similar to *ml-bow-random_oversampling*
-# 
-# * **ml-bow-processed-random_oversampling-max_features**<br>
-# Poor.
-# 
-# * **ml-tfidf-processed-random_oversampling-max_features**<br>
-# Poor.
-# 
 # 
 # ### Conclusions:
 # * Smote is not the best oversampling technique for text, specially for BOW features
@@ -148,6 +108,7 @@ start_time = time.time()
 # * BOW features are comparably to TF-IDF features
 # * Random oversampling is a good oversampling technique
 # * Use a maximum number of features wasn't a good approach
+# * Better results are achivied when using unigrams, bigrams and trigrams
 
 # In[2]:
 
@@ -158,96 +119,71 @@ path_dir = 'results/' + str(base) + '/' + subset + '/ml/'
 path_dir
 
 
-# In[3]:
+# In[18]:
 
 
-# best results analysis
-df_best = pd.DataFrame(columns=['model', 'accuracy', 'precision', 'recall', 'f1 score', 'auc score','vocab'])
-#iterates over files
-exp = []
-for filename in os.listdir(path_dir):
-    exp.append(str(filename).replace('.csv',''))
-    file_path = path_dir + filename
-    #print(filename)
-    df_temp = pd.read_csv(file_path)
-    best_ix = df_temp['f1 score'].argmax() #f1 score
-    best = df_temp.iloc[best_ix]
-    df_best = df_best.append(best)
-df_best['experiment'] = exp
-cols = df_best.columns.tolist()
-cols = cols[-2:] + cols[:-2]
-df_best = df_best[cols]
-df_best = df_best.reset_index()
-df_best = df_best.drop(columns = ['index'])
-df_best = df_best.sort_values(by='f1 score',ascending=False)
-df_best.style.background_gradient(cmap='Blues')
+data_dir = 'data/' + str(base) #+ '/vis_processed_texts.p'
+pre_processed = False # the texts were already pre-processed
+processed_texts_filename = 'processed_texts-'+subset+'.p'
+for filename in os.listdir(data_dir):
+    print(filename)
+    if filename == processed_texts_filename:
+        preprocessed = True
+preprocessed     
 
 
-# # Begin experiment
-experiments =  ['ml-bow-random_oversampling',
+# In[20]:
+
+
+experiments = ['ml-tfidf-unibitri_gram-random_oversampling',
+ 'ml-tfidf-unibi_gram-random_oversampling',
+ 'ml-tfidf-unibitri_gram-processed-random_oversampling',
+ 'ml-tfidf-unibitriquad_gram-processed-random_oversampling',
+ 'ml-tfidf-bigram-random_oversampling',
+ 'ml-bow-unibitri_gram-random_oversampling',
+ 'ml-tfidf-processed-smote',
  'ml-bow-processed-random_oversampling',
  'ml-tfidf-random_oversampling',
  'ml-tfidf-processed-random_oversampling',
- 'ml-tfidf-processed-smote',
- 'ml-bow',
  'ml-tfidf-smote',
+ 'ml-tfidf-undersampling',
  'ml-tfidf',
- 'ml-bow-processed',
  'ml-tfidf-processed',
- 'ml-tfidf-random_oversampling-max_features',
+ 'ml-bow-unibitri_gram-processed-random_oversampling',
+ 'ml-bow-random_oversampling',
+ 'ml-bow',
+ 'ml-bow-processed',
+ 'ml-bow-random_oversampling-processed',
  'ml-bow-random_oversampling-max_features',
+ 'ml-tfidf-random_oversampling-max_features',
  'ml-tfidf-processed-random_oversampling-max_features',
  'ml-bow-processed-random_oversampling-max_features',
- 'ml-bow-processed-smote',
- 'ml-tfidf-undersampling']
+ 'ml-tfidf-trigram-random_oversampling',
+ 'ml-bow-processed-smote']
 
+# # Begin experiment
 
-# In[4]:
+# In[21]:
+
 for experiment in experiments:
-    
-    pre_processed = True # the texts were already pre-processed
+    start_time = time.time()
     filepath = 'data/' + str(base) + '/fakeWhatsApp.BR_' + str(base) + '.csv'
+    validation_mlp = False
     df = pd.read_csv(filepath)
     
     if subset == 'viral':
-        df = df[df['viral']==1]
-        
-    df.head(5)
+        df = df[df['viral']==1]    
     
-    
-    # # Corpus statistics
-    
-    # In[5]:
-    
-    
-    df.describe()[['characters','words','sharings']]
-    
-    
-    # In[6]:
+     
+    # In[23]:
     
     
     texts = df[df['midia']==0]['text']
     y = df[df['midia']==0]['misinformation']
+       
+  
     
-    
-    # In[7]:
-    
-    
-    print('total data')
-    pos_mask = y == 1 
-    pos = y[pos_mask]
-    neg_mask = y == 0 
-    neg = y[neg_mask]
-    values = [pos.shape[0],neg.shape[0]]
-    keys = ['misinformation', 'non-misinformation']
-    g = sns.barplot(x = keys, y = values)
-    for p in g.patches:
-        g.annotate(format(p.get_height(), '.0f'), (p.get_x() + p.get_width() / 2., 
-                                                   p.get_height()), ha = 'center', 
-                   va = 'center', xytext = (0, 5), textcoords = 'offset points')
-    
-    
-    # In[8]:
+    # In[25]:
     
     
     #removing duplicates
@@ -256,21 +192,7 @@ for experiment in experiments:
     texts = df[df['midia']==0]['text']
     y = df[df['midia']==0]['misinformation']
     
-    print('data after remove duplicates')
-    pos_mask = y == 1 
-    pos = y[pos_mask]
-    neg_mask = y == 0 
-    neg = y[neg_mask]
-    values = [pos.shape[0],neg.shape[0]]
-    keys = ['misinformation', 'non-misinformation']
-    g = sns.barplot(x = keys, y = values)
-    for p in g.patches:
-        g.annotate(format(p.get_height(), '.0f'), (p.get_x() + p.get_width() / 2., 
-                                                   p.get_height()), ha = 'center', 
-                   va = 'center', xytext = (0, 5), textcoords = 'offset points')
-    
-    
-    # In[9]:
+    # In[26]:
     
     
     print(len(texts))
@@ -296,7 +218,7 @@ for experiment in experiments:
     # 
     # * **Stop words**
     
-    # In[10]:
+    # In[27]:
     
     
     #emojis and punctuation
@@ -382,7 +304,7 @@ for experiment in experiments:
                
     
     
-    # In[11]:
+    # In[28]:
     
     
     #if experiment is with pre-processed text
@@ -400,25 +322,15 @@ for experiment in experiments:
                 else:
                     pickle.dump(pro_texts, open( "data/2018/processed_texts-viral.p", "wb" ))
     else:
-        pro_texts = [t for t in texts]
+        #only use lowercase and separates emojis and punctuation
+        pro_texts = [processEmojisPunctuation(t.lower(),remove_punct = False) for t in texts]
     
     
-    # In[12]:
-    
-    
-    list(zip(pro_texts[0:10], texts[0:10]))
-    
-    
-    # In[13]:
-    
-    
-    print(len(pro_texts))
-    print(len(y))
-    
+     
     
     # ## Train-test split
     
-    # In[14]:
+    # In[31]:
     
     
     #random state = 42 for reprudictibility
@@ -431,20 +343,38 @@ for experiment in experiments:
     
     # ## Vectorization
     
-    # In[15]:
+    # In[32]:
     
     
     max_feat = 500
     
     if 'tfidf' in experiment:
         if 'max_features' in experiment:
-            vectorizer = TfidfVectorizer(max_features = max_feat) 
+            vectorizer = TfidfVectorizer(max_features = max_feat)
+        elif 'bigram' in experiment:
+            vectorizer = TfidfVectorizer(ngram_range =(2,2))
+        elif 'trigram' in experiment:
+            vectorizer = TfidfVectorizer(ngram_range =(3,3)) 
+        elif 'unibi_gram' in experiment:
+            vectorizer = TfidfVectorizer(ngram_range =(1,2))
+        elif 'unibitri_gram' in experiment:
+            vectorizer = TfidfVectorizer(ngram_range =(1,3))       
+        elif 'unibitriquad_gram' in experiment:
+            vectorizer = TfidfVectorizer(ngram_range =(1,3))  
         else:
             vectorizer = TfidfVectorizer()
             
     elif 'bow' in experiment:
         if 'max_features' in experiment:
-            vectorizer = CountVectorizer(max_features = max_feat, binary=True) 
+            vectorizer = CountVectorizer(max_features = max_feat, binary=True)
+        elif 'bigram' in experiment:
+            vectorizer = CountVectorizer(binary=True, ngram_range =(2,2))
+        elif 'trigram' in experiment:
+            vectorizer = CountVectorizer(binary=True, ngram_range =(3,3)) 
+        elif 'unibi_gram' in experiment:
+            vectorizer = CountVectorizer(binary=True, ngram_range =(1,2))
+        elif 'unibitri_gram' in experiment:
+            vectorizer = CountVectorizer(binary=True, ngram_range =(1,3))
         else:
             vectorizer = CountVectorizer(binary=True)
     
@@ -454,36 +384,12 @@ for experiment in experiments:
     X = vectorizer.transform(pro_texts)
     
     
-    # ## SVD visualization
+ 
+
     
-    # In[16]:
+
     
-    
-    n_components = 2
-    title = "SVD decomposition"
-    # Creation of the model
-    mod = TruncatedSVD(n_components=n_components)
-    # Fit and transform the features
-    principal_components = mod.fit_transform(X)
-    
-    # Put them into a dataframe
-    df_features = pd.DataFrame(data=principal_components,
-                     columns=['1', '2'])
-    
-    df_features['label'] = y
-    
-    # Plot
-    plt.figure(figsize=(10,10))
-    sns.scatterplot(x='1',
-                    y='2',
-                    hue="label", 
-                    data=df_features,
-                    alpha=.8).set_title(title);
-    
-    
-    # ## Data balancing
-    
-    # In[17]:
+    # In[35]:
     
     
     if 'smote' in experiment:
@@ -500,7 +406,7 @@ for experiment in experiments:
     X_train.shape
     
     
-    # In[18]:
+    # In[36]:
     
     
     vocab_size = X_train.shape[1]
@@ -509,159 +415,198 @@ for experiment in experiments:
     
     # ## Metrics
     
-    # In[19]:
+    # In[38]:
     
     
+    #metrics
     scenario = []
     model = []
     accuracy_score = []
     precision_score = []
+    precision_score_neg = []
     recall_score = []
+    recall_score_neg = []
     f1_score = []
+    f1_score_neg = []
     auc_score = []
     
     
     # ## Models training and test
     
-    # In[20]:
+    # In[39]:
     
     
     print('Logistic Regression')
     logreg = LogisticRegression().fit(X_train, y_train)
     y_pred = logreg.predict(X_test)
     y_prob = logreg.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
     model.append('logistic regression')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
     accuracy_score.append(acc)
     precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
     recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
     f1_score.append(f1)
-    auc_score.append(roc_auc)
-    
-    
-    # In[21]:
-    
-    
-    print('Bernoulli Naive-Bayes')
-    bnb = BernoulliNB().fit(X_train, y_train)
-    y_pred = bnb.predict(X_test)
-    y_prob = bnb.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
-    model.append('bernoulli naive-bayes')
-    accuracy_score.append(acc)
-    precision_score.append(precision)
-    recall_score.append(recall)
-    f1_score.append(f1)
-    auc_score.append(roc_auc)
-    
-    
-    # In[22]:
-    
-    
-    print('Multinomial Naive-Bayes')
-    mnb = MultinomialNB().fit(X_train, y_train)
-    y_pred = mnb.predict(X_test)
-    y_prob = mnb.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
-    model.append('multinomial naive-bayes')
-    accuracy_score.append(acc)
-    precision_score.append(precision)
-    recall_score.append(recall)
-    f1_score.append(f1)
-    auc_score.append(roc_auc)
-    
-    
-    # In[23]:
-    
-    
-    print('Linear Support Vector Machine')
-    svm = LinearSVC().fit(X_train, y_train)
-    y_pred = svm.predict(X_test)
-    #y_prob = svm.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred)
-    
-    model.append('linear svm')
-    accuracy_score.append(acc)
-    precision_score.append(precision)
-    recall_score.append(recall)
-    f1_score.append(f1)
-    auc_score.append(roc_auc)
-    
-    
-    # In[24]:
-    
-    
-    print('KNN')
-    rf = KNeighborsClassifier().fit(X_train, y_train)
-    y_pred = rf.predict(X_test)
-    y_prob = rf.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
-    model.append('knn')
-    accuracy_score.append(acc)
-    precision_score.append(precision)
-    recall_score.append(recall)
-    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
     auc_score.append(roc_auc)
     
     
     # In[25]:
     
     
+    print('Bernoulli Naive-Bayes')
+    bnb = BernoulliNB().fit(X_train, y_train)
+    y_pred = bnb.predict(X_test)
+    y_prob = bnb.predict_proba(X_test)[:,1]
+    model.append('bernoulli naive-bayes')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
+    accuracy_score.append(acc)
+    precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
+    recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
+    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
+    auc_score.append(roc_auc)
+    
+    
+    # In[40]:
+    
+    
+    print('Multinomial Naive-Bayes')
+    mnb = MultinomialNB().fit(X_train, y_train)
+    y_pred = mnb.predict(X_test)
+    y_prob = mnb.predict_proba(X_test)[:,1]
+    model.append('multinomial naive-bayes')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
+    accuracy_score.append(acc)
+    precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
+    recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
+    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
+    auc_score.append(roc_auc)
+    
+    
+    # In[41]:
+    
+    
+    print('Linear Support Vector Machine')
+    svm = LinearSVC(dual=False).fit(X_train, y_train)
+    y_pred = svm.predict(X_test)
+    model.append('linear svm')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, full_metrics = True, print_charts = False)
+    accuracy_score.append(acc)
+    precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
+    recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
+    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
+    auc_score.append(roc_auc)
+    
+    
+    # In[42]:
+    
+    
+    print('KNN')
+    knn = KNeighborsClassifier().fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+    y_prob = knn.predict_proba(X_test)[:,1]
+    model.append('knn')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
+    accuracy_score.append(acc)
+    precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
+    recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
+    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
+    auc_score.append(roc_auc)
+    
+    
+    # In[45]:
+    
+    
+    print('Linear SVM with SGD training.')
+    sgd = SGDClassifier().fit(X_train, y_train)
+    y_pred = sgd.predict(X_test)
+    model.append('sgd')
+    
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, full_metrics = True, print_charts = False)
+    
+    accuracy_score.append(acc)
+    precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
+    recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
+    f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
+    auc_score.append(roc_auc)
+    
+    
+    # In[43]:
+    
+    
     print('Random Forest')
     rf = RandomForestClassifier().fit(X_train, y_train)
     y_pred = rf.predict(X_test)
     y_prob = rf.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
     model.append('random forest')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
     accuracy_score.append(acc)
     precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
     recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
     f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
     auc_score.append(roc_auc)
     
     
-    # In[26]:
+    # In[44]:
     
     
     print('Gradient Boosting')
-    gb = GradientBoostingClassifier().fit(X_train, y_train)
+    gb = GradientBoostingClassifier(n_estimators=200).fit(X_train, y_train)
     y_pred = gb.predict(X_test)
     y_prob = gb.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
     model.append('gradient boosting')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
     accuracy_score.append(acc)
     precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
     recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
     f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
     auc_score.append(roc_auc)
     
     
-    # In[38]:
+    # In[46]:
     
     
     print('Multilayer perceptron')
-    mlp = MLPClassifier(max_iter=10,verbose=True).fit(X_train, y_train)
+    mlp = MLPClassifier(max_iter = 6, verbose=True, early_stopping= True).fit(X_train, y_train)
     y_pred = mlp.predict(X_test)
     y_prob = mlp.predict_proba(X_test)[:,1]
-    acc, precision, recall, f1, roc_auc = getTestMetrics(y_test, y_pred, y_prob)
-    
     model.append('mlp')
+    acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc = getTestMetrics(y_test, y_pred, y_prob, full_metrics = True, print_charts = False)
     accuracy_score.append(acc)
     precision_score.append(precision)
+    precision_score_neg.append(precision_neg)
     recall_score.append(recall)
+    recall_score_neg.append(recall_neg)
     f1_score.append(f1)
+    f1_score_neg.append(f1_neg)
     auc_score.append(roc_auc)
     
     
     # ## Results
     
-    # In[28]:
+    # In[47]:
     
     
     end_time = time.time()
@@ -669,28 +614,43 @@ for experiment in experiments:
     print('ellapsed time (min):', ellapsed_time/60)
     
     
-    # In[29]:
+    # In[48]:
     
     
-    df_metrics = pd.DataFrame({'model':model,
+    df_metrics = pd.DataFrame({'model':model,                                 
+                                     'vocab':[vocab_size]*len(model),
+                                     'auc score': auc_score,
                                      'accuracy':accuracy_score,
-                                     'precision': precision_score,
-                                     'recall': recall_score,
-                                     'f1 score': f1_score,
-                                     'auc score': auc_score})
+                                     'precision 1': precision_score,
+                                     'recall 1': recall_score,
+                                     'f1 score 1': f1_score,
+                                     'precision 0': precision_score_neg,
+                                     'recall 0': recall_score_neg,                                 
+                                     'f1 score 0': f1_score_neg
+                                     })
     
-    df_metrics['vocab'] = [vocab_size]*len(df_metrics)
-    df_metrics
+    df_metrics['precision avg'] = (df_metrics['precision 1'] + df_metrics['precision 0'])/2
+    df_metrics['recall avg'] = (df_metrics['recall 1'] + df_metrics['recall 0'])/2
+    df_metrics['f1 avg'] = (df_metrics['f1 score 1'] + df_metrics['f1 score 0'])/2
+
     
     
-    # In[30]:
+    # In[49]:    
+    
+    
+    
+    # In[34]:
     
     
     filepath = 'results/' + base + '/' + subset + '/ml/' + experiment + '.csv'
-    filepath
+    print(filepath)
     
     
-    # In[31]:
+    # In[35]:
     
     
     df_metrics.to_csv(filepath, index = False)
+
+
+# # Best results
+
