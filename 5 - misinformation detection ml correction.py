@@ -85,7 +85,7 @@ sns.set(style="darkgrid")
 
 
 base = '2018'
-subset = 'viral'
+subset = 'viral-15-words'
 path_dir = 'results/' + str(base) + '/' + subset + '/ml/'
 path_dir
 
@@ -94,13 +94,16 @@ path_dir
 
 
 data_dir = 'data/' + str(base) #+ '/vis_processed_texts.p'
-pre_processed = False # the texts were already pre-processed
+preprocessed = False # the texts were already pre-processed
 processed_texts_filename = 'processed_texts-'+subset+'.p'
 for filename in os.listdir(data_dir):
     print(filename)
     if filename == processed_texts_filename:
         preprocessed = True
-preprocessed     
+preprocessed 
+
+filepath = 'data/' + str(base) + '/fakeWhatsApp.BR_' + str(base) + '.csv'
+df = pd.read_csv(filepath)    
 
 
 # In[20]:
@@ -141,12 +144,13 @@ experiments = ['ml-tfidf-unibitri_gram-random_oversampling',
 for experiment in experiments:
 #%%
     start_time = time.time()
-    filepath = 'data/' + str(base) + '/fakeWhatsApp.BR_' + str(base) + '.csv'
-    validation_mlp = False
-    df = pd.read_csv(filepath)
     
     if subset == 'viral':
-        df = df[df['viral']==1]    
+        df = df[df['viral']==1]
+        
+    if subset == 'viral-15-words':
+        df = df[df['sharings']>1]
+        df = df[df['words']>15]
     
      
     # In[23]:
@@ -464,13 +468,15 @@ for experiment in experiments:
     
     filepath = 'results/' + base + '/' + subset + '/ml/' + experiment + '.csv'
     print(filepath)
+    df_metrics.to_csv(filepath, index = False) 
     
-#%%
-    df_update = pd.read_csv(filepath)
-    df_update.set_index('model', inplace=True)
-    df_update.update(df_metrics)
-    df_update = df_update.reset_index()
-    df_update.to_csv(filepath, index = False)    
+    
+#%% update files
+#    df_update = pd.read_csv(filepath)
+#    df_update.set_index('model', inplace=True)
+#    df_update.update(df_metrics)
+#    df_update = df_update.reset_index()
+#    df_update.to_csv(filepath, index = False)    
     
     
     # In[35]:

@@ -18,7 +18,7 @@ def getTestMetrics(y_test, y_pred, y_prob = [], full_metrics = False, print_char
     Input: predictions and labels
     Output: charts and metrics
     '''
-    print(metrics.classification_report(y_test, y_pred))
+    #print(metrics.classification_report(y_test, y_pred))
     
     f1 = metrics.f1_score(y_test, y_pred, pos_label = 1, average = 'binary') #macro
     acc = metrics.accuracy_score(y_test, y_pred)
@@ -32,8 +32,9 @@ def getTestMetrics(y_test, y_pred, y_prob = [], full_metrics = False, print_char
     
     #confusion matrix
     if print_charts:
+        print(metrics.classification_report(y_test, y_pred))
         cf_matrix = metrics.confusion_matrix(y_test, y_pred)
-        group_names = ['VN','FP','FN','VP']
+        group_names = ['TN','FP','FN','TP']
         group_counts = ['{0:0.0f}'.format(value) for value in
                         cf_matrix.flatten()]
         group_percentages = ['{0:.2%}'.format(value) for value in
