@@ -11,6 +11,136 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy as sp
 import time
+import emoji, re, string
+import nltk
+from nltk.corpus import stopwords
+import spacy
+
+
+
+#emojis and punctuation
+emojis_list = list(emoji.UNICODE_EMOJI.keys())
+emojis_list += ['\n']
+punct = list(string.punctuation) + ['\n']
+emojis_punct = emojis_list + punct
+
+
+#stop words removal
+stop_words = list(stopwords.words('portuguese'))
+new_stopwords = ['aí','pra','vão','vou','onde','lá','aqui',
+                 'tá','pode','pois','so','deu','agora','todo',
+                 'nao','ja','vc', 'bom', 'ai','ta', 'voce', 'alguem', 'ne', 'pq',
+                 'cara','to','mim','la','vcs','tbm', 'tudo']
+stop_words = stop_words + new_stopwords
+final_stop_words = []
+for sw in stop_words:
+    sw = ' '+ sw + ' '
+    final_stop_words.append(sw)
+
+def processEmojisPunctuation(text, remove_punct = False, remove_emoji = False):
+    '''
+    Put spaces between emojis. Removes punctuation.
+    '''
+    #get all unique chars
+    chars = set(text)
+    #for each unique char in text, do:
+    for c in chars:
+        
+        if remove_punct: #remove punctuation            
+            if c in punct: 
+                text = text.replace(c, ' ')
+        else: #put spaces between punctuation
+            if c in punct:
+                text = text.replace(c, ' ' + c + ' ')
+        
+        if remove_emoji: #remove emojis
+            if c in emojis_list:
+                text = text.replace(c, ' ')
+        else: #put spaces between emojis
+            if c in emojis_list:
+                text = text.replace(c, ' ' + c + ' ')                        
+            
+    text = re.sub(' +', ' ', text)
+    return text
+
+
+def removeStopwords(text):    
+#     text = [t for t in text.split() if t not in final_stop_words]
+#     text = ' '.join(text)
+#     text = re.sub(' +',' ',text)
+#     return text
+    for sw in final_stop_words:
+        text = text.replace(sw,' ')
+    text = re.sub(' +',' ',text)
+    return text
+
+def remove_numbers(text):
+    pattern = '[0-9]+'
+    text = re.sub(pattern, '[num]', text)
+    return text
+
+#lemmatization
+nlp = spacy.load('pt_core_news_sm')
+def lemmatization(text):
+    doc = nlp(text)
+    for token in doc:
+        if token.text != token.lemma_:
+            text = text.replace(token.text, token.lemma_)
+    return text
+    
+
+def domainUrl(text):
+    '''
+    Substitutes an URL in a text for the domain of this URL
+    Input: an string
+    Output: the string with the modified URL
+    '''    
+    if 'http' in text:
+        re_url = '[^\s]*https*://[^\s]*'
+        matches = re.findall(re_url, text, flags=re.IGNORECASE)
+        for m in matches:
+            domain = m.split('//')
+            domain = domain[1].split('/')[0]
+            text = re.sub(re_url, domain, text, 1)
+        text = text.replace('www','')
+        return text
+    else:
+        return text
+    
+def processLoL(text):
+    re_kkk = 'kkk*'
+    t = re.sub(re_kkk, "kkk", text, flags=re.IGNORECASE)
+    return t
+
+def firstSentence(text):
+    list_s = sent_split(text)
+    for s in list_s:
+        if s is not None:
+            return s
+
+def sent_split(text):
+    list_s = re.split('\. |\! |\? |\n',text)
+    return list_s    
+
+def preprocess(text, semi=False, rpunct = False, remoji = False, sentence = False, lemma = False):
+    if sentence:
+        text = firstSentence(text) # remove
+    text = text.lower().strip()    
+    text = domainUrl(text)
+    text = processLoL(text)
+    text = processEmojisPunctuation(text,remove_punct = rpunct, remove_emoji=remoji)
+    text = remove_numbers(text)
+    if semi:        
+        return text
+    text = removeStopwords(text)
+    if lemma:
+        text = lemmatization(text)
+    return text  
+
+
+
+
+
 
 def getTestMetrics(y_test, y_pred, y_prob = [], full_metrics = False, print_charts = True):
     '''
