@@ -22,6 +22,13 @@ from unidecode import unidecode
 
 #%% 
 # user classification
+def get_text_content(user, column):
+    msgs = df[(df['id']==user) & (df['midia']==0)][column]
+    msgs = list(msgs.values)
+    msgs = " ".join(msgs)
+    return msgs
+
+
 def get_user_features(df,users):
     '''
     
@@ -30,6 +37,9 @@ def get_user_features(df,users):
     texto = []
     media = []
     msg_str = []
+    preprocessed_msg_str = []
+    stemmed_msg_str= []
+    lemma_msg_str = []
     misinformation = []
     n_groups = []
     n_users = []
@@ -42,7 +52,7 @@ def get_user_features(df,users):
     for user in users.index:
         virals.append(len(df[(df['id'] == user) & (df['viral']==1)]))
         texto.append(len(df[(df['id'] == user) & (df['midia']==0)]))
-        media.append(len(df[(df['id'] == user)]) - len(df[(df['id'] == user) & (df['midia']==0)]))
+        media.append(len(df[(df['id'] == user) & (df['midia']==1)]))
         misinformation.append(len(df[(df['id'] == user) & (df['misinformation']==1)]))
         n_groups.append(df[df['id']==user]['group'].nunique())
         urls.append(len(df[(df['id'] == user) & (df['url']==1)]))
@@ -72,19 +82,24 @@ def get_user_features(df,users):
         n_users.append(u_degree)
         strenght.append(u_strenght)
         n_users_mis.append(u_degree_mis)
-        strenght_mis.append(u_strenght_mis)
+        strenght_mis.append(u_strenght_mis)        
         
-        msgs = df[(df['id']==user) & (df['midia']==0)]['preprocessed_text']
-        msgs = list(msgs.values)
-        msgs = " ".join(msgs)
-        msg_str.append(msgs)
+        # full text
+        msg_str.append(get_text_content(user, 'text'))        
+        # pre-processed text        
+        preprocessed_msg_str.append(get_text_content(user, 'preprocessed_text'))        
+        # stemmed text
+        stemmed_msg_str.append(get_text_content(user, 'preprocessed_text_stemmed'))        
+        # lemmatized text
+        lemma_msg_str.append(get_text_content(user, 'preprocessed_text_lemma')) 
         
     topUsers = pd.DataFrame({'id':users.index, 'total_messages':users.values, 'viral_messages':virals, 
                              'texts':texto, 'midia':media, 'urls':urls,
                              'number_of_groups':n_groups, 'reached_users':n_users,'messages_for_reached_user':strenght,
                              'misinformations': misinformation, 'misinformation_ratio':mis_ratio,
                              'users_misinformed':n_users_mis, 'misinformation_for_reached_user':strenght_mis,                             
-                             'messages':msg_str})    
+                             'messages':msg_str, 'preprocessed_messages':preprocessed_msg_str,
+                             'preprocessed_stemmed_messages':stemmed_msg_str, 'preprocessed_lemmatized_messages':lemma_msg_str})    
     return topUsers
     
 

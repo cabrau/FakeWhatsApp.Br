@@ -1,3 +1,3 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:25d7bce7977d0eb21419d881b62858203b74b920e0f09d3f884744629ce8c8f2
-size 992
+experiment,vocab,layers,max_features,batch_size,embedding_dims,filters,kernel_size,hidden_dims,epochs,accuracy,precision,recall,f1 score,auc score
+cnn1,705,"<keras.layers.embeddings.Embedding, <keras.layers.core.Dropout, <keras.layers.convolutional.Conv1D, <keras.layers.pooling.GlobalMaxPooling1D, <keras.layers.core.Dense, <keras.layers.core.Dropout, <keras.layers.core.Activation, <keras.layers.core.Dense, <keras.layers.core.Activation, ",2000,32,100,250,15,250,5,0.7767265846736046,0.7706666666666667,0.6583143507972665,0.7100737100737099,0.8506737878821387
+cnn1-lowercase,665,"<keras.layers.embeddings.Embedding, <keras.layers.core.Dropout, <keras.layers.convolutional.Conv1D, <keras.layers.pooling.GlobalMaxPooling1D, <keras.layers.core.Dense, <keras.layers.core.Dropout, <keras.layers.core.Activation, <keras.layers.core.Dense, <keras.layers.core.Activation, ",2000,32,100,250,15,250,8,0.7615894039735099,0.7220902612826603,0.6924829157175398,0.7069767441860465,0.8316396488046531
