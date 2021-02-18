@@ -268,7 +268,7 @@ def preprocess(text, semi=False, rpunct = False, remoji = False, lemma = False, 
 #%%
 # metrics
 
-def getTestMetrics(y_test, y_pred, y_prob = [], full_metrics = False, print_charts = True):
+def get_test_metrics(y_test, y_pred, y_prob = [], full_metrics = False, print_charts = True):
     '''
     Plot charts e print performance metrics
     Input: predictions and labels
