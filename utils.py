@@ -10,100 +10,148 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import scipy as sp
-import time
 import emoji, re, string
-import nltk
 from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import RSLPStemmer
 import spacy
 from unidecode import unidecode
 
 #%% 
 # user classification
-def get_text_content(user, column):
+
+def get_text_content(df,user,column):
     msgs = df[(df['id']==user) & (df['midia']==0)][column]
     msgs = list(msgs.values)
-    msgs = " ".join(msgs)
+    msgs = "<>".join(msgs)
     return msgs
 
+def get_network_features(df, user, group, users_reached):
+    users_in_group = df[df['group']==group]['id'].unique()
+    n_messages_in_group = len(df[(df['group']==group) & (df['id']==user)])
+    
+    for u in users_in_group:
+        if u in users_reached:
+            users_reached[u] += n_messages_in_group
+        else:
+            users_reached[u] = n_messages_in_group
+    return users_reached
 
 def get_user_features(df,users):
+    '''    
     '''
+    # whatsapp features
+    n_messages = []
+    n_groups = [] 
+    n_virals = []
+    n_text = []
+    n_midia = []
+    viral_ratio = []
+    midia_ratio = []
+    text_ratio = []
     
-    '''
-    virals = []
-    texto = []
-    media = []
-    msg_str = []
-    preprocessed_msg_str = []
-    stemmed_msg_str= []
-    lemma_msg_str = []
-    misinformation = []
-    n_groups = []
-    n_users = []
-    strenght = []
-    n_users_mis = []
-    strenght_mis = []
-    urls = []
-    mis_ratio = []
+    # content features
+    viral_texts = []
     
-    for user in users.index:
-        virals.append(len(df[(df['id'] == user) & (df['viral']==1)]))
-        texto.append(len(df[(df['id'] == user) & (df['midia']==0)]))
-        media.append(len(df[(df['id'] == user) & (df['midia']==1)]))
-        misinformation.append(len(df[(df['id'] == user) & (df['misinformation']==1)]))
-        n_groups.append(df[df['id']==user]['group'].nunique())
-        urls.append(len(df[(df['id'] == user) & (df['url']==1)]))
-        mis_ratio.append(len(df[(df['id'] == user) & (df['misinformation']==1)])/len(df[df['id']==user]))
+    #labeled features
+    n_misinformation = []
+    message_misinformation_ratio = []
+    viral_misinformation_ratio = []
+    
+    # network features: nodes are users #####################
+    
+    # messages network: links are messages sent by a user to other in the same group. 
+    # weight is the number of messages
+    messages_degree_centrality = [] # sum of links
+    messages_strenght = [] # sum of weights in links
+    #messages_eigencentrality = [] #eigencentrality
+    
+    # viral network: links are viral messages sent by a user to other in the same group. 
+    # weight is the number of messages
+    viral_degree_centrality = [] # sum of links
+    viral_strenght = [] # sum of weights in links
+    #viral_eigencentrality = [] #eigencentrality
+    
+    # misinformation network: links are misinformation sent by a user to other in the same group. 
+    # weight is the number of messages
+    mis_degree_centrality = [] # sum of links
+    mis_strenght = [] # sum of weights in links
+#     messages_eigencentrality = [] #eigencentrality   
+    
+    for user in users.index:       
+        df_user = df[df['id']==user]
         
-        u_degree = 0
-        u_strenght = 0
-        groups = df[df['id']==user]['group'].unique()
+        #whatsapp features
+        n_messages.append(len(df_user))
+        n_text.append(len(df_user[df_user['midia']==0]))
+        n_midia.append(len(df_user[df_user['midia']==1]))
+        n_virals.append(len(df_user[(df_user['viral']==1)]))
+        groups = df_user['group'].unique()
+        n_groups.append(df_user['group'].nunique())
+        #ratios
+        viral_ratio.append(n_virals[-1]/n_messages[-1])
+        midia_ratio.append(n_midia[-1]/n_messages[-1])
+        text_ratio.append(n_text[-1]/n_messages[-1])
         
-        u_degree_mis = 0
-        u_strenght_mis = 0
+        #labelled features
+        n_misinformation.append(len(df_user[df_user['misinformation']==1]))
+        message_misinformation_ratio.append(n_misinformation[-1]/n_messages[-1])
+        if n_virals[-1] > 0:
+            viral_misinformation_ratio.append(n_misinformation[-1]/n_virals[-1])
+        else:
+            viral_misinformation_ratio.append(0)
         
+        #content (lemmatized)
+        col = 'preprocessed_text_lemma'
+        virals = get_text_content(df[df['viral']==1],user,col)
+        viral_texts.append(virals)     
+        
+        #graph features         
+        users_reached = {}
+        users_reached_viral = {}
+        users_reached_mis = {}
+        
+        # iterate through groups where user interacted
         for g in groups:
-            users_in_group = df[df['group']==g]['id'].nunique()
-            messages_in_group = len(df[(df['id']==user) &(df['group']==g)])            
-            u_strenght += users_in_group*messages_in_group
-            u_degree += users_in_group
-            
-            # misinformations
-            users_misinformed = 0
-            misinformation_in_group = len(df[(df['id']==user) & (df['group']==g) & (df['misinformation']==1)])
-            if misinformation_in_group > 0:
-                users_misinformed = users_in_group                
-            u_strenght_mis += users_misinformed*misinformation_in_group
-            u_degree_mis += users_misinformed  
-            
-        n_users.append(u_degree)
-        strenght.append(u_strenght)
-        n_users_mis.append(u_degree_mis)
-        strenght_mis.append(u_strenght_mis)        
+            users_reached = get_network_features(df, user, g, users_reached)
+            users_reached_viral = get_network_features(df[df['viral']==1], user, g, users_reached_viral)
+            users_reached_mis = get_network_features(df[df['misinformation']==1], user, g, users_reached_mis)
         
-        # full text
-        msg_str.append(get_text_content(user, 'text'))        
-        # pre-processed text        
-        preprocessed_msg_str.append(get_text_content(user, 'preprocessed_text'))        
-        # stemmed text
-        stemmed_msg_str.append(get_text_content(user, 'preprocessed_text_stemmed'))        
-        # lemmatized text
-        lemma_msg_str.append(get_text_content(user, 'preprocessed_text_lemma')) 
+        # message network
+        users_reached = pd.Series(users_reached)[1:]
+        messages_degree_centrality.append(users_reached.count())
+        messages_strenght.append(users_reached.sum())
         
-    topUsers = pd.DataFrame({'id':users.index, 'total_messages':users.values, 'viral_messages':virals, 
-                             'texts':texto, 'midia':media, 'urls':urls,
-                             'number_of_groups':n_groups, 'reached_users':n_users,'messages_for_reached_user':strenght,
-                             'misinformations': misinformation, 'misinformation_ratio':mis_ratio,
-                             'users_misinformed':n_users_mis, 'misinformation_for_reached_user':strenght_mis,                             
-                             'messages':msg_str, 'preprocessed_messages':preprocessed_msg_str,
-                             'preprocessed_stemmed_messages':stemmed_msg_str, 'preprocessed_lemmatized_messages':lemma_msg_str})    
-    return topUsers
-    
+        # viral network
+        users_reached_viral = pd.Series(users_reached_viral)[1:]
+        viral_degree_centrality.append(users_reached_viral.count())
+        viral_strenght.append(users_reached_viral.sum())
+        
+        # misinformation network
+        users_reached_mis = pd.Series(users_reached_mis)[1:]
+        mis_degree_centrality.append(users_reached_mis.count())
+        mis_strenght.append(users_reached_mis.sum())  
+        
+        
+    #credibility = 1-pd.Series(viral_misinformation_ratio)  
+    df_users = pd.DataFrame({'id':users.index, 'groups':n_groups, 'number_of_messages':n_messages,
+                            'texts':n_text,'text_ratio':text_ratio,
+                             'midia':n_midia,'midia_ratio':midia_ratio,
+                             'virals':n_virals,'viral_ratio':viral_ratio,                             
+                             'degree_centrality':messages_degree_centrality,
+                             'strenght':messages_strenght,
+                             'viral_degree_centrality':viral_degree_centrality,
+                             'viral_strenght':viral_strenght,
+                             'misinformation':n_misinformation,
+                             'misinformation_degree_centrality':mis_degree_centrality,
+                             'misinformation_strenght':mis_strenght,
+                             'misinformation_ratio': message_misinformation_ratio,
+                             'viral_misinformation_ratio':viral_misinformation_ratio,
+                             #'credibility':credibility,
+                             'viral_messages':viral_texts,
+                            })    
+    return df_users
 
-def getTopUsers(df,top=10):
+def get_top_users(df,top=10):
     groupedByid = df.groupby(['id']).count()
     groupedByid = groupedByid.sort_values('date', ascending=False)[0:top]['date']
     return get_user_features(df,groupedByid)

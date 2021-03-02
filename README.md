@@ -5,7 +5,7 @@ If you use our corpus, please include a citation to our corresponding paper.
 
 ## Data
 The data collected during 2018 brazilian presidential ellections is located at:
-* ``data/2018/high_quality_labels/fakeWhatsApp.BR_2018.csv``
+* ``data/2018/fakeWhatsApp.BR_2018.csv``
 
 The data is stored in a CSV file, where each line is a message sent in a public group. The dictionary of variables is the following:
 * ``id``: unique ID of a user
