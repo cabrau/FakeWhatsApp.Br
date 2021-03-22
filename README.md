@@ -22,7 +22,7 @@ The data is stored in a CSV file, where each line is a message sent in a public 
 * ``viral``: boolean variable indicating if a message with the exactly same text and more of 5 words appears in the corpus (1) or don't (0). The viral messages were the ones manually labelled.
 * ``shares``: number of times that a message with the exactly same text appears in the corpus
 * ``text``: textual content of message
-* ``misinformation``: manually assigned label if the message contains misinformation (1) or don't (1). -1 means that the message was not labelled.
+* ``misinformation``: manually assigned label if the message contains misinformation (1) or don't (1).
 * ``ambiguity``: assigned 1 if the misinformation label is uncertain: the veracity of the text cannot be confirmed or it can be confused with a personal opinion, humorous text, etc.
 
 ## Notebooks:
@@ -49,3 +49,12 @@ Exploiting user features to classify misinformation
 
 * ``8 - unified features.ipynb``<br>
 Exploiting semantic and morphological features
+
+* ``9 - user classification.ipynb``<br>
+Experiments classifying users as superspreaders
+
+* ``10 - user credibility.ipynb``<br>
+Modeling user credibility to improve misinformation detection
+
+* ``11 - final experiments.ipynb``<br>
+Automatic expansion of dataset, word2vec and doc2vec text representation.
