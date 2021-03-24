@@ -45,16 +45,13 @@ Experiments with classical machine learning models to classify textual misinform
 Experiments with a character level convolutional neural network to classify textual misinformation.
 
 * ``7 - user features.ipynb``<br>
-Exploiting user features to classify misinformation
+Exploiting user features to detect misinformation
 
-* ``8 - unified features.ipynb``<br>
-Exploiting semantic and morphological features
-
-* ``9 - user classification.ipynb``<br>
+* ``8 - user classification.ipynb``<br>
 Experiments classifying users as superspreaders
+
+* ``9 - automatic dataset expansion.ipynb``<br>
+Experiments with automatic expansion of dataset using cosine similarity
 
 * ``10 - user credibility.ipynb``<br>
 Modeling user credibility to improve misinformation detection
-
-* ``11 - final experiments.ipynb``<br>
-Automatic expansion of dataset, word2vec and doc2vec text representation.
