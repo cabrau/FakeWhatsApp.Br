@@ -23,7 +23,7 @@ The data is stored in a CSV file, where each line is a message sent in a public 
 * ``shares``: number of times that a message with the exactly same text appears in the corpus
 * ``text``: textual content of message
 * ``misinformation``: manually assigned label if the message contains misinformation (1) or don't (1). The value -1 means that the message was not labelled.
-* ``ambiguity``: assigned 1 if the misinformation label is uncertain: the veracity of the text cannot be confirmed or it can be confused with a personal opinion, humorous text, etc.
+* ``ambiguity``: (not implemented yet) assigned 1 if the misinformation label is uncertain: the veracity of the text cannot be confirmed or it can be confused with a personal opinion, humorous text, etc.
 
 ## Notebooks:
 * ``1 - parser.ipynb``<br>
