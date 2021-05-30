@@ -159,13 +159,6 @@ def get_top_users(df,top=10):
 #%%
 # text preprocessing 
 
-#emojis and punctuation
-emojis_list = list(emoji.UNICODE_EMOJI.keys())
-emojis_list += ['\n']
-punct = list(string.punctuation) 
-emojis_punct = emojis_list + punct
-
-
 
 #stop words removal
 stop_words = list(stopwords.words('portuguese'))
@@ -174,6 +167,32 @@ new_stopwords = ['aí','pra','vão','vou','onde','lá','aqui',
                  'nao','ja','vc', 'bom', 'ai','ta', 'voce', 'alguem', 'ne', 'pq',
                  'cara','to','mim','la','vcs','tbm', 'tudo']
 stop_words = stop_words #+ new_stopwords
+
+
+def process_emojis(text):
+    demoji = emoji.demojize(text, language = 'pt')
+    demoji = demoji.replace(':',' ')
+    for w in demoji.split():
+        if '_' in w:
+            prefix = w.split('_')[0:2]
+            prefix = '_'.join(prefix)
+            demoji = demoji.replace(w, prefix)
+    return demoji
+
+def process_punctuation(text):
+    # important punctuation
+    punct = ['*', '_', '!', "\n", '?']
+    #get all unique chars
+    chars = set(text)
+    #for each unique char in text, do:
+    for c in chars:
+        if c in punct:
+            text = text.replace(c, ' ' + c + ' ')
+        elif c in string.punctuation:
+            text = text.replace(c, ' ')
+    text 
+    return text    
+    
 
 def processEmojisPunctuation(text, remove_punct = False, remove_emoji = False):
     '''
@@ -257,6 +276,14 @@ def processLoL(text):
     t = re.sub(re_kkk, "kkk", text, flags=re.IGNORECASE)
     return t
 
+def repeated_chars(text):
+    chars = set(text)
+    for c in chars:
+        if c.isalpha():
+            regex = c + c + '+'
+            text = re.sub(regex, c+c, text)
+    return text
+
 def firstSentence(text):
     list_s = sent_split(text)
     for s in list_s:
@@ -265,36 +292,69 @@ def firstSentence(text):
 
 def sent_split(text):
     list_s = re.split('\. |\! |\? |\n',text)
-    return list_s    
+    return list_s
 
-def preprocess(text, semi=False, rpunct = False, remoji = False, lemma = False, stem = False):
+
+def preprocess(text, lemma = True):
             
+    # normalization    
     text = text.lower().strip()    
     text = domainUrl(text)
     text = processLoL(text)
-    text = processEmojisPunctuation(text,remove_punct = rpunct, remove_emoji=remoji)    
-    
-    if not remoji:
-        for word in set(text.split()):        
-            if word not in emojis_list:            
-                text = text.replace(word,unidecode(word))            
-            
+    text = repeated_chars(text)
     text = remove_numbers(text)
-    
-    if semi:        
-        return text
-    
-    text = removeStopwords(text)
-    text = re.sub(' +', ' ', text)
+    # separet punctuation and emojis
+    text = process_punctuation(text) 
+    text = process_emojis(text)    
+    # remove stopwords
+    text = removeStopwords(text)    
+    # remove exceeding spaces
+    text = re.sub(' +', ' ', text)    
     text = text.strip()
-    
-    if stem:
-        text = stemming(text)
     
     if lemma:
         text = lemmatization(text)
+    
+    # remove accents
+    for word in set(text.split()):        
+             if not word.startswith(':'):            
+                 text = text.replace(word,unidecode(word))
         
-    return text  
+    return text     
+
+# def preprocess(text, semi=False, rpunct = True, remoji = False, lemma = True, stem = False):
+            
+#     text = text.lower().strip()    
+#     text = domainUrl(text)
+#     text = processLoL(text)
+#     text = repeated_chars(text)
+#     text = remove_numbers(text)    
+#     text = processEmojisPunctuation(text,remove_punct = rpunct, remove_emoji=remoji)    
+    
+#     # remove punctuation
+#     if not remoji:
+#         for word in set(text.split()):        
+#             if word not in emojis_list:            
+#                 text = text.replace(word,unidecode(word))          
+            
+    
+    
+#     if semi:        
+#         return text
+#     # remove stopwords
+#     text = removeStopwords(text)
+#     # remove exceeding spaces
+#     text = re.sub(' +', ' ', text)    
+#     text = text.strip()
+    
+#     if stem:
+#         text = stemming(text)
+    
+#     if lemma:
+#         text = lemmatization(text)
+        
+#     return text 
+ 
 #%%
 # testing
 
@@ -315,6 +375,23 @@ def preprocess(text, semi=False, rpunct = False, remoji = False, lemma = False, 
 
 #%%
 # metrics
+
+def optimal_threshold(prob,y):
+    best_thresold = 0
+    best_score = 0
+    
+    for i in range(100):
+        threshold = i/100
+        y_pred = [1 if p >= threshold else 0 for p in prob]
+        score = metrics.accuracy_score(y,y_pred)
+        
+        if score > best_score:
+            #print(score)
+            best_thresold = threshold
+            best_score = score
+            
+    return best_thresold
+
 
 def get_test_metrics(y_test, y_pred, y_prob = [], full_metrics = False, print_charts = True):
     '''
