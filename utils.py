@@ -455,3 +455,88 @@ def get_test_metrics(y_test, y_pred, y_prob = [], full_metrics = False, print_ch
         results = (acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc)
     
     return results
+
+#%%
+
+# optization
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+
+def random_layers():
+    '''
+    Create a tuple random of hidden_layer_sizes. 
+    '''
+    n_layers = np.random.randint(1,4)
+    layers_list = []
+    for i in range(n_layers):            
+        hidden_neurons = np.random.randint(1,15)*25
+        layers_list.append(hidden_neurons)
+    layers_tuple = tuple(layers_list)
+    return layers_tuple
+
+def optimized_mlp(hl,bs,al,lri):
+    clf = MLPClassifier(activation = 'relu', solver = 'adam',random_state = 42, 
+                   tol = 1e-3, verbose = False, early_stopping = True, 
+                   n_iter_no_change = 3, max_iter = 100,
+                   hidden_layer_sizes = hl, alpha = al, 
+                   learning_rate_init = lri, batch_size = bs)
+    return clf
+
+def random_search_mlp(X_train,y_train,n_iter=10):
+    
+    # hyperparams to optimize
+    hidden_layers = []
+    alphas = []
+    batch_sizes = []
+    learning_rate_inits = []
+    # sample
+    np.random.seed(0)
+    for i in range(n_iter):   
+        hl = random_layers()
+        #print(hl,end = '; ')
+        hidden_layers.append(hl)
+        ap = 10**np.random.uniform(-6,-2)
+        #print(ap, end = '; ')
+        alphas.append(ap)
+        learning = 10**np.random.uniform(-4,-1)
+        #print(learning, end = '; ')
+        learning_rate_inits.append(learning)
+        batch = np.random.randint(1,7)*50 #math.floor(10**np.random.uniform(1.5,2.6)) #np.random.randint(2,30)*10
+        #print(batch)
+        batch_sizes.append(batch)
+
+    # tunning
+    X_train_v, X_val, y_train_v, y_val = train_test_split(X_train, y_train, test_size=0.1, random_state=42)
+    best_score = 0
+    i = 0
+    for hl,bs,al,lri in zip(hidden_layers,batch_sizes,alphas,learning_rate_inits):
+        
+        clf = optimized_mlp(hl,bs,al,lri)
+
+        print(i, end= ' ')
+        i+=1
+        print()
+        print('hidden layers: {a}; alpha: {b:.5f}; learning rate: {c:.5f}; batch: {d}'.format(a=hl,b=al,c=lri,d=bs))    
+        clf.fit(X_train_v, y_train_v)
+        y_pred = clf.predict(X_val)        
+        y_prob = clf.predict_proba(X_val)[:,1]
+        
+        fpr, tpr, thresholds = metrics.roc_curve(y_val, y_prob, pos_label=1)
+        roc_auc = metrics.auc(fpr, tpr)
+        
+        print('AUC: {a:.3f}'.format(a=roc_auc))       
+        if roc_auc > best_score:
+            best_score = roc_auc
+            best_params = (hl,bs,al,lri)
+
+        #print('validation rmse: {a:.3f}'.format(a=rmse))
+
+
+    hl,bs,al,lri = best_params
+    print()
+    print('--------------------')
+    print('BEST PARAMETERS (validation AUC = {a:.3f})'.format(a=best_score))
+    print('hidden layers: {a}; alpha: {b:.5f}; learning rate: {c:.5f}; batch: {d}'.format(a=hl,b=al,c=lri,d=bs))
+    print('--------------------')
+    return hl,bs,al,lri
+
