@@ -15,6 +15,7 @@ from nltk.corpus import stopwords
 from nltk.stem import RSLPStemmer
 import spacy
 from unidecode import unidecode
+from gensim.models import Word2Vec
 
 #%% 
 # user classification
@@ -410,6 +411,7 @@ def get_test_metrics(y_test, y_pred, y_prob = [], full_metrics = False, print_ch
         f1_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
         precision_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
         recall_neg = metrics.f1_score(y_test, y_pred, pos_label = 0, average = 'binary')
+        false_positive_rate = 1 - recall_neg
     
     #confusion matrix
     if print_charts:
@@ -451,9 +453,11 @@ def get_test_metrics(y_test, y_pred, y_prob = [], full_metrics = False, print_ch
     
     if not full_metrics:
         results = (acc, precision, recall, f1, roc_auc)
-    else:
-        results = (acc, precision, precision_neg, recall, recall_neg, f1, f1_neg, roc_auc)
-    
+    else:        
+        results = (acc, false_positive_rate, precision, recall, f1, roc_auc)        
+        for m in results:
+            m = str(m).replace('.',',')[0:5]
+            print(m)
     return results
 
 #%%
@@ -523,8 +527,9 @@ def random_search_mlp(X_train,y_train,n_iter=10):
         
         fpr, tpr, thresholds = metrics.roc_curve(y_val, y_prob, pos_label=1)
         roc_auc = metrics.auc(fpr, tpr)
+        roc_auc = metrics.accuracy_score(y_val, y_pred)
         
-        print('AUC: {a:.3f}'.format(a=roc_auc))       
+        print('ACC: {a:.3f}'.format(a=roc_auc))       
         if roc_auc > best_score:
             best_score = roc_auc
             best_params = (hl,bs,al,lri)
@@ -540,3 +545,91 @@ def random_search_mlp(X_train,y_train,n_iter=10):
     print('--------------------')
     return hl,bs,al,lri
 
+#%%
+
+# word embeddings
+
+def vectorize_text(model, text, method='mean'):
+        """
+        Convert all words in a text to their embedding vector
+        and calculate a vector for the text, by the mean or the sum of word vectors
+        Parameters
+        ----------
+        text: str
+        Text from wich the word vector's will be calculated    
+        
+        method: str
+        'mean' or 'sum'
+            
+        Returns
+        -------
+        vec: numpy.ndarray 
+        Array of the word embeddings from the given text 
+        """
+        n = model.wv.vector_size
+        X = np.empty(shape=[0, n])
+        words = text.split()
+        for word in words:
+            try:
+                vec = model.wv[word]
+                X = np.append(X,[vec], axis = 0)
+            # if oov:    
+            except:
+                #print('word not in vocabulary: ', word)
+                continue
+        if X.size == 0:
+            vec = np.zeros(n)
+        elif method == 'mean':
+            vec = np.mean(X,axis=0)
+        elif method == 'sum':
+            vec = np.sum(X,axis=0)
+        return vec
+    
+def vectorize_corpus(model, corpus, method='mean'):
+        """
+        Convert all texts in a corpus to vectors
+        Parameters
+        ----------
+        corpus: list
+        List of texts    
+        
+        method: str
+        'mean' or 'sum'
+            
+        Returns
+        -------
+        X: numpy.ndarray 
+        2D Array of vectors from each text in corpus
+        """
+        X = [vectorize_text(model, text, method=method) for text in corpus]
+        X = np.concatenate(X, axis=0).reshape(len(X),len(X[0]))
+        return X
+
+
+#%%
+# data processing
+
+def z_score(X_train,X_test):
+    '''
+    Normalization z    
+
+    Parameters
+    ----------
+    X_train : numpy
+        DESCRIPTION.
+    X_test : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    X_train : numpy
+        DESCRIPTION.
+    X_test : TYPE
+        DESCRIPTION.
+
+    '''
+    mu = np.mean(X_train, 0)
+    sigma = np.std(X_train, 0)
+    X_train = (X_train - mu ) / sigma
+    X_test = (X_test - mu ) / sigma
+    return X_train,X_test
