@@ -18,24 +18,21 @@ from unidecode import unidecode
 from gensim.models import Word2Vec
 
 #%% 
-# user classification
-
-def get_text_content(df,user,column):
-    msgs = df[(df['id']==user) & (df['midia']==0)][column]
-    msgs = list(msgs.values)
-    msgs = "<>".join(msgs)
-    return msgs
-
-def get_network_features(df, user, group, users_reached):
-    users_in_group = df[df['group']==group]['id'].unique()
-    n_messages_in_group = len(df[(df['group']==group) & (df['id']==user)])
+# user identification
+def get_degree_and_strenght(df_user, df, user):
+    user_groups = df_user['group'].unique()
+    degree = 0
+    strenght = 0
     
-    for u in users_in_group:
-        if u in users_reached:
-            users_reached[u] += n_messages_in_group
-        else:
-            users_reached[u] = n_messages_in_group
-    return users_reached
+    for g in user_groups:
+        messages_in_g = len(df_user[df_user['group']==g])
+        degree_in_g = len(df[df['group']==g]['id'].unique())
+        strenght_in_g = degree_in_g*messages_in_g
+        
+        degree += degree_in_g
+        strenght += strenght_in_g
+    
+    return degree, strenght
 
 def get_user_features(df,users):
     '''    
@@ -49,9 +46,16 @@ def get_user_features(df,users):
     viral_ratio = []
     midia_ratio = []
     text_ratio = []
+    repeated_messages = []
+    repeated_messages_ratio = []
     
-    # content features
-    viral_texts = []
+    # temporal features
+    days_active = []
+    daily_mean = []
+    daily_std = []
+    daily_median = []
+    daily_95 = []
+    daily_outliers = []  
     
     #labeled features
     n_misinformation = []
@@ -85,13 +89,21 @@ def get_user_features(df,users):
         n_messages.append(len(df_user))
         n_text.append(len(df_user[df_user['midia']==0]))
         n_midia.append(len(df_user[df_user['midia']==1]))
-        n_virals.append(len(df_user[(df_user['viral']==1)]))
-        groups = df_user['group'].unique()
+        n_virals.append(len(df_user[(df_user['viral']==1)]))        
         n_groups.append(df_user['group'].nunique())
         #ratios
         viral_ratio.append(n_virals[-1]/n_messages[-1])
         midia_ratio.append(n_midia[-1]/n_messages[-1])
         text_ratio.append(n_text[-1]/n_messages[-1])
+        
+        #repeated messages
+        originals = len(df_user[df_user['midia']==0].drop_duplicates(subset='text'))
+        duplicates = len(df_user[df_user['midia']==0]) - originals
+        repeated_messages.append(duplicates)
+        if n_text[-1] > 0:
+            repeated_messages_ratio.append(duplicates/n_text[-1])
+        else:
+            repeated_messages_ratio.append(0)
         
         #labelled features
         n_misinformation.append(len(df_user[df_user['misinformation']==1]))
@@ -100,44 +112,41 @@ def get_user_features(df,users):
             viral_misinformation_ratio.append(n_misinformation[-1]/n_virals[-1])
         else:
             viral_misinformation_ratio.append(0)
+            
+        # temporal features
+        frame = '24H'
+        messages_by_day = df_user.groupby('timestamp').count()['id'].resample(frame).sum()        
+        days_active.append(messages_by_day.count())
+        daily_mean.append(messages_by_day.mean())
+        daily_std.append(messages_by_day.std())
+        daily_median.append(messages_by_day.median())
+        daily_95.append(messages_by_day.quantile(0.95))
+        daily_outliers.append((messages_by_day > daily_95[-1]).sum())
         
-        #content (lemmatized)
-        col = 'preprocessed_text_lemma'
-        virals = get_text_content(df[df['viral']==1],user,col)
-        viral_texts.append(virals)     
+        #graph features
+        degree, strenght = get_degree_and_strenght(df_user, df, user)
+        v_degree, v_strenght = get_degree_and_strenght(df_user[df_user['viral']==1], df, user)
+        m_degree, m_strenght = get_degree_and_strenght(df_user[df_user['misinformation']==1], df, user)
         
-        #graph features         
-        users_reached = {}
-        users_reached_viral = {}
-        users_reached_mis = {}
+        messages_degree_centrality.append(degree)
+        messages_strenght.append(strenght)
         
-        # iterate through groups where user interacted
-        for g in groups:
-            users_reached = get_network_features(df, user, g, users_reached)
-            users_reached_viral = get_network_features(df[df['viral']==1], user, g, users_reached_viral)
-            users_reached_mis = get_network_features(df[df['misinformation']==1], user, g, users_reached_mis)
+        viral_degree_centrality.append(v_degree)
+        viral_strenght.append(v_strenght)
         
-        # message network
-        users_reached = pd.Series(users_reached)[1:]
-        messages_degree_centrality.append(users_reached.count())
-        messages_strenght.append(users_reached.sum())
+        mis_degree_centrality.append(m_degree)
+        mis_strenght.append(m_strenght)    
         
-        # viral network
-        users_reached_viral = pd.Series(users_reached_viral)[1:]
-        viral_degree_centrality.append(users_reached_viral.count())
-        viral_strenght.append(users_reached_viral.sum())
-        
-        # misinformation network
-        users_reached_mis = pd.Series(users_reached_mis)[1:]
-        mis_degree_centrality.append(users_reached_mis.count())
-        mis_strenght.append(users_reached_mis.sum())  
-        
-        
-    #credibility = 1-pd.Series(viral_misinformation_ratio)  
+           
     df_users = pd.DataFrame({'id':users.index, 'groups':n_groups, 'number_of_messages':n_messages,
                             'texts':n_text,'text_ratio':text_ratio,
                              'midia':n_midia,'midia_ratio':midia_ratio,
-                             'virals':n_virals,'viral_ratio':viral_ratio,                             
+                             'virals':n_virals,'viral_ratio':viral_ratio,
+                             'repeated_messages':repeated_messages, 
+                             'repeated_messages_ratio':repeated_messages_ratio,
+                             'days_active':days_active, 'daily_mean':daily_mean,
+                             'daily_std':daily_std, 'daily_median': daily_median,
+                             'daily_95':daily_95, 'daily_outliers':daily_outliers,
                              'degree_centrality':messages_degree_centrality,
                              'strenght':messages_strenght,
                              'viral_degree_centrality':viral_degree_centrality,
@@ -146,9 +155,7 @@ def get_user_features(df,users):
                              'misinformation_degree_centrality':mis_degree_centrality,
                              'misinformation_strenght':mis_strenght,
                              'misinformation_ratio': message_misinformation_ratio,
-                             'viral_misinformation_ratio':viral_misinformation_ratio,
-                             #'credibility':credibility,
-                             'viral_messages':viral_texts,
+                             'viral_misinformation_ratio':viral_misinformation_ratio
                             })    
     return df_users
 
