@@ -55,7 +55,8 @@ def get_user_features(df,users):
     daily_std = []
     daily_median = []
     daily_95 = []
-    daily_outliers = []  
+    daily_outliers = []
+    daily_max = []
     
     #labeled features
     n_misinformation = []
@@ -121,6 +122,7 @@ def get_user_features(df,users):
         daily_std.append(messages_by_day.std())
         daily_median.append(messages_by_day.median())
         daily_95.append(messages_by_day.quantile(0.95))
+        daily_max.append(messages_by_day.max())
         daily_outliers.append((messages_by_day > daily_95[-1]).sum())
         
         #graph features
@@ -147,6 +149,7 @@ def get_user_features(df,users):
                              'days_active':days_active, 'daily_mean':daily_mean,
                              'daily_std':daily_std, 'daily_median': daily_median,
                              'daily_95':daily_95, 'daily_outliers':daily_outliers,
+                             'daily_max':daily_max,
                              'degree_centrality':messages_degree_centrality,
                              'strenght':messages_strenght,
                              'viral_degree_centrality':viral_degree_centrality,
