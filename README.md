@@ -1,7 +1,9 @@
 # FakeWhatsApp.Br
-An annotated Corpus of anonymized WhatsApp messages in PT-BR public groups for automatic detection of textual misinformation and low credibility users. To get detailed information about the construction and experimentation of the corpus, check out our paper published in ICEIS 2021 conference:
+An annotated Corpus of anonymized WhatsApp messages in PT-BR public groups for automatic detection of textual misinformation and malicious users. To get detailed information about the construction and experimentation of the corpus, check out our paper published in ICEIS 2021 conference: 
 
-If you use our corpus, please include a citation to our corresponding paper.
+``Cabral, Lucas, et al. "Fakewhastapp. br: NLP and machine learning techniques for misinformation detection in brazilian portuguese whatsapp messages." Proceedings of the 23rd International Conference on Enterprise Information Systems, ICEIS. 2021.``
+
+If you use our corpus, please include a citation to our corresponding paper. For futher discussion and experiments, you can check out my master thesis (in portuguese): https://repositorio.ufc.br/handle/riufc/63379
 
 ## Data
 The data collected during 2018 brazilian presidential ellections is located at:
@@ -23,7 +25,6 @@ The data is stored in a CSV file, where each line is a message sent in a public 
 * ``shares``: number of times that a message with the exactly same text appears in the corpus
 * ``text``: textual content of message
 * ``misinformation``: manually assigned label if the message contains misinformation (1) or don't (1). The value -1 means that the message was not labelled.
-* ``ambiguity``: (not implemented yet) assigned 1 if the misinformation label is uncertain: the veracity of the text cannot be confirmed or it can be confused with a personal opinion, humorous text, etc.
 
 ## Notebooks:
 * ``1 - parser.ipynb``<br>
